@@ -17,6 +17,7 @@ import defaultClearRenderer from './utils/defaultClearRenderer';
 
 import Option from './Option';
 import Value from './Value';
+import DraggableValue from './DraggableValue';
 
 function stringifyValue (value) {
 	const valueType = typeof value;
@@ -65,6 +66,7 @@ class Select extends React.Component {
 		this.removeValue = this.removeValue.bind(this);
 		this.selectValue = this.selectValue.bind(this);
 		this.focusOption = this.focusOption.bind(this);
+		this.handlerReorder = this.handlerReorder.bind(this);
 
 		this.state = {
 			inputValue: '',
@@ -699,7 +701,7 @@ class Select extends React.Component {
 
 	renderValue (valueArray, isOpen) {
 		let renderLabel = this.props.valueRenderer || this.getOptionLabel;
-		let ValueComponent = this.props.valueComponent;
+		let ValueComponent = this.props.valueComponent || ((this.props.draggable && this.props.multi) ? DraggableValue : Value);
 		if (!valueArray.length) {
 			return !this.state.inputValue ? <div className="Select-placeholder">{this.props.placeholder}</div> : null;
 		}
@@ -708,6 +710,7 @@ class Select extends React.Component {
 			return valueArray.map((value, i) => {
 				return (
 					<ValueComponent
+						index={i}
 						id={this._instancePrefix + '-value-' + i}
 						instancePrefix={this._instancePrefix}
 						disabled={this.props.disabled || value.clearableValue === false}
@@ -715,6 +718,7 @@ class Select extends React.Component {
 						onClick={onClick}
 						onRemove={this.removeValue}
 						value={value}
+						handlerReorder={this.handlerReorder}
 					>
 						{renderLabel(value, i)}
 						<span className="Select-aria-only">&nbsp;</span>
@@ -972,6 +976,14 @@ class Select extends React.Component {
 		);
 	}
 
+	handlerReorder(dragIndex, hoverIndex) {
+			const options = this.getValueArray(this.props.value);
+			const dragOption = options[dragIndex];
+			const target = options.splice(dragIndex, 1)[0];
+			options.splice(hoverIndex, 0, target);
+			this.props.onChange(options);
+	}
+
 	render () {
 		let valueArray = this.getValueArray(this.props.value);
 		let options = this._visibleOptions = this.filterOptions(this.props.multi ? this.getValueArray(this.props.value) : null);
@@ -1041,6 +1053,7 @@ class Select extends React.Component {
 	}
 };
 
+
 Select.propTypes = {
     addLabelText: PropTypes.string,       // placeholder displayed when you want to add a label on a multi-value input
     'aria-describedby': PropTypes.string, // HTML ID(s) of element(s) that should be used to describe this input (for assistive tech)
@@ -1060,6 +1073,7 @@ Select.propTypes = {
     deleteRemoves: PropTypes.bool,        // whether backspace removes an item if there is no text input
     delimiter: PropTypes.string,          // delimiter to use to join multiple values for the hidden field value
     disabled: PropTypes.bool,             // whether the Select is disabled or not
+		draggable: PropTypes.bool,            // whether the value is draggable, only applicable for multi=true
     escapeClearsValue: PropTypes.bool,    // whether escape clears the value when the menu is closed
     filterOption: PropTypes.func,         // method to filter a single option (option, filterString)
     filterOptions: PropTypes.any,         // boolean to enable default filtering or function to filter the options array ([options], filterString, [values])
@@ -1127,6 +1141,7 @@ Select.defaultProps = {
     deleteRemoves: true,
     delimiter: ',',
     disabled: false,
+		draggable: false,
     escapeClearsValue: true,
     filterOptions: defaultFilterOptions,
     ignoreAccents: true,
@@ -1151,7 +1166,7 @@ Select.defaultProps = {
     searchable: true,
     simpleValue: false,
     tabSelectsValue: true,
-    valueComponent: Value,
+    valueComponent: null,
     valueKey: 'value',
 };
 
